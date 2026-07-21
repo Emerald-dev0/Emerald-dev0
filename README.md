@@ -170,38 +170,65 @@
 <br/>
 
 <p align="center">
-  <table align="center">
+  <table align="center" width="100%">
     <tr>
-      <td>
-        <a href="https://github.com/Emerald-dev0">
-          <img
-            src="https://github-readme-stats.vercel.app/api?username=Emerald-dev0&show_icons=true&count_private=true&include_all_commits=true&theme=vue-dark&bg_color=0f172a&hide_border=true&border_radius=12&icon_color=10B981&title_color=10B981&text_color=94a3b8"
-            alt="GitHub Stats"
-            width="400"
-          />
-        </a>
-      </td>
-      <td>
-        <a href="https://git.io/streak-stats">
-          <img
-            src="https://github-readme-streak-stats.herokuapp.com?user=Emerald-dev0&theme=vue-dark&hide_border=true&background=0f172a&stroke=10B981&ring=10B981&fire=10B981&currStreakNum=ffffff&sideNums=10B981&currStreakLabel=10B981&sideLabels=94a3b8&border_radius=12"
-            alt="Streak Stats"
-            width="400"
-          />
-        </a>
-      </td>
+      
+    <td align="center" width="25%" style="padding: 6px;">
+      <table width="100%" style="border: 1px solid #30363d; border-radius: 12px; background: #0f172a; padding: 12px 8px;">
+        <tr><td align="center">
+          <span style="font-size: 1.6rem;">📦</span>
+          <br/>
+          <strong style="color: #10B981; font-size: 1.3rem;">55</strong>
+          <br/>
+          <sub style="color: #94a3b8; font-size: 0.75rem;">Repositories</sub>
+          
+        </td></tr>
+      </table>
+    </td>,
+    <td align="center" width="25%" style="padding: 6px;">
+      <table width="100%" style="border: 1px solid #30363d; border-radius: 12px; background: #0f172a; padding: 12px 8px;">
+        <tr><td align="center">
+          <span style="font-size: 1.6rem;">⭐</span>
+          <br/>
+          <strong style="color: #10B981; font-size: 1.3rem;">1</strong>
+          <br/>
+          <sub style="color: #94a3b8; font-size: 0.75rem;">Total Stars</sub>
+          <br/><sub style="color: #555; font-size: 0.65rem;">Top: full-stack-blog</sub>
+        </td></tr>
+      </table>
+    </td>,
+    <td align="center" width="25%" style="padding: 6px;">
+      <table width="100%" style="border: 1px solid #30363d; border-radius: 12px; background: #0f172a; padding: 12px 8px;">
+        <tr><td align="center">
+          <span style="font-size: 1.6rem;">🍴</span>
+          <br/>
+          <strong style="color: #10B981; font-size: 1.3rem;">2</strong>
+          <br/>
+          <sub style="color: #94a3b8; font-size: 0.75rem;">Total Forks</sub>
+          
+        </td></tr>
+      </table>
+    </td>,
+    <td align="center" width="25%" style="padding: 6px;">
+      <table width="100%" style="border: 1px solid #30363d; border-radius: 12px; background: #0f172a; padding: 12px 8px;">
+        <tr><td align="center">
+          <span style="font-size: 1.6rem;">👥</span>
+          <br/>
+          <strong style="color: #10B981; font-size: 1.3rem;">1</strong>
+          <br/>
+          <sub style="color: #94a3b8; font-size: 0.75rem;">Followers</sub>
+          <br/><sub style="color: #555; font-size: 0.65rem;">3 following</sub>
+        </td></tr>
+      </table>
+    </td>
     </tr>
-    <tr>
-      <td colspan="2" align="center">
-        <a href="https://github.com/Emerald-dev0">
-          <img
-            src="https://github-readme-stats.vercel.app/api/top-langs/?username=Emerald-dev0&layout=compact&theme=vue-dark&bg_color=0f172a&hide_border=true&border_radius=12&title_color=10B981&text_color=94a3b8"
-            alt="Top Languages"
-            width="830"
-          />
-        </a>
-      </td>
-    </tr>
+    <tr><td colspan="4" align="center" style="padding: 6px;">
+      <table width="100%" style="border: 1px solid #30363d; border-radius: 12px; background: #0f172a; padding: 12px;">
+        <tr><td align="center">
+          <sub style="color: #94a3b8; font-size: 0.8rem;">🏆 Most used: <strong style="color: #10B981;">JavaScript</strong></sub>
+        </td></tr>
+      </table>
+    </td></tr>
   </table>
 </p>
 
@@ -1479,7 +1506,7 @@
     <sub>This profile is alive — updated daily via GitHub Actions.</sub>
     <br/><br/>
     <sub style="color: #555;">
-      <strong>Last refreshed:</strong> 2026-07-21 14:59:51 UTC UTC
+      <strong>Last refreshed:</strong> 2026-07-21 15:04:14 UTC UTC
     </sub>
   </samp>
 </p>
