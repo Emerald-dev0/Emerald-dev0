@@ -1,0 +1,57 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  🟢 AUTO-GENERATE README — Runs Daily                       ║
+# ║                                                              ║
+# ║  What this does:                                            ║
+# ║  1. Checks out your profile repo                            ║
+# ║  2. Runs scripts/generate-readme.mjs                       ║
+# ║  3. That script fetches your repos from GitHub API          ║
+# ║  4. Generates a complete README.md from scratch             ║
+# ║  5. Commits and pushes the update                           ║
+# ║                                                              ║
+# ║  No .env needed — GITHUB_TOKEN is auto-provided by Actions. ║
+# ║  Just push the code and it works.                           ║
+# ║                                                              ║
+# ║  Snake animation is handled by contribution-snake.yml.       ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+name: 🟢 Generate README
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  generate:
+    name: Generate Profile README
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: ⬇️ Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ⚡ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 🔄 Generate README
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/generate-readme.mjs
+
+      - name: 📤 Commit and Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --quiet && git diff --staged --quiet || \
+            git commit -m "docs: auto-generate README [skip ci]" && \
+            git push
+
+      - name: ✅ Done
+        run: echo "README regenerated at $(date -u)"

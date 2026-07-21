@@ -1,0 +1,57 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Contribution Snake — Auto-Generator
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  Generates an SVG animation of a snake eating your contribution graph.
+#  The output is stored in your profile repo and rendered in your README.
+#
+#  Based on Platane/snk — https://github.com/Platane/snk
+#
+#  HOW IT WORKS:
+#  - Runs daily at midnight
+#  - Generates both dark and light snake SVGs
+#  - Outputs to the `output/` branch of this repo
+#  - Your README references: YOUR_USERNAME/YOUR_USERNAME/output/snake.svg
+#
+#  SETUP: No extra config needed. Just push this file.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: Generate Snake
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+  workflow_dispatch:
+
+  push:
+    branches: [main, master]
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate Snake SVG
+        uses: Platane/snk@v3
+        with:
+          github_user_name: ${{ github.repository_owner }}
+          outputs: |
+            output/snake.svg
+            output/snake-dark.svg?palette=github-dark
+
+      - name: Push to output branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
+          publish_branch: output
+          force_orphan: true
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_message: "chore: update contribution snake [skip ci]"

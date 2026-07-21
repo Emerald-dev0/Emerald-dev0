@@ -1,0 +1,15 @@
+{
+  "name": "emerald-dev0",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Oluwadare Daniel Anuoluwapo — dynamically generated GitHub profile README",
+  "type": "module",
+  "scripts": {
+    "generate": "node scripts/generate-readme.mjs"
+  },
+  "keywords": ["github-profile", "readme", "automation"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
