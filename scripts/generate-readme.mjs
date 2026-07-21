@@ -147,6 +147,194 @@ async function fetchUserStats(username) {
   }
 }
 
+/**
+ * Fetch contribution calendar data from GitHub GraphQL API
+ * This returns the EXACT same data GitHub uses for its contribution graph
+ */
+async function fetchContributions(username) {
+  if (!GITHUB_TOKEN) {
+    console.warn("⚠️  No GITHUB_TOKEN — contribution graph will be skipped");
+    return null;
+  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const from = `${year}-01-01T00:00:00Z`;
+  const to = `${year}-12-31T23:59:59Z`;
+
+  const query = `
+    query($username: String!, $from: DateTime!, $to: DateTime!) {
+      user(login: $username) {
+        contributionsCollection(from: $from, to: $to) {
+          contributionCalendar {
+            totalContributions
+            weeks {
+              contributionDays {
+                contributionCount
+                date
+                color
+                contributionLevel
+              }
+            }
+          }
+        }
+      }
+    }`;
+
+  try {
+    const res = await fetch("https://api.github.com/graphql", {
+      method: "POST",
+      headers: { ...HEADERS, "Content-Type": "application/json" },
+      body: JSON.stringify({ query, variables: { username, from, to } }),
+    });
+    if (!res.ok) throw new Error(`GraphQL contributions: ${res.status}`);
+    const data = await res.json();
+    return data?.data?.user?.contributionsCollection?.contributionCalendar || null;
+  } catch (err) {
+    console.warn(`⚠️  Contribution fetch failed: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Generate an inline SVG contribution grid matching GitHub's actual style
+ * Uses the SAME data source as GitHub's own contribution graph
+ */
+function generateContributionGrid(calendar) {
+  if (!calendar || !calendar.weeks || calendar.weeks.length === 0) {
+    return `<!-- ================================================================ -->
+<!--                    🟢 CONTRIBUTION GRAPH                          -->
+<!-- ================================================================ -->
+
+<h2 align="center">✦ Contribution Graph</h2>
+
+<br/>
+
+<p align="center">
+  <sub>Contribution data unavailable — set GITHUB_TOKEN in Actions for accurate graph.</sub>
+</p>
+
+<br/>`;
+  }
+
+  const total = calendar.totalContributions;
+  const weeks = calendar.weeks;
+  const year = new Date().getFullYear();
+
+  // SVG dimensions
+  const cellSize = 12;
+  const gap = 3;
+  const stride = cellSize + gap;
+  const cols = weeks.length;
+  const rows = 7;
+  const padding = { top: 30, left: 42, right: 20, bottom: 20 };
+  const svgWidth = padding.left + cols * stride + padding.right;
+  const svgHeight = padding.top + rows * stride + padding.bottom;
+  const legendX = svgWidth - 200;
+  const legendY = svgHeight - 8;
+
+  // Day labels (0=Sun, 1=Mon...)
+  const dayLabels = ["", "Mon", "", "Wed", "", "Fri", ""];
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  // Build month label positions
+  let monthLabels = [];
+  let lastMonth = -1;
+  for (let w = 0; w < weeks.length; w++) {
+    if (weeks[w].contributionDays.length > 0) {
+      const firstDay = new Date(weeks[w].contributionDays[0].date);
+      if (firstDay.getMonth() !== lastMonth) {
+        const labelIndex = monthLabels.length;
+        const x = padding.left + w * stride + stride / 2;
+        if (labelIndex === 0 || x - monthLabels[labelIndex - 1].x > 40) {
+          monthLabels.push({ x, label: monthNames[firstDay.getMonth()], width: 30 });
+        }
+        lastMonth = firstDay.getMonth();
+      }
+    }
+  }
+
+  // Build cells
+  let cells = "";
+  for (let w = 0; w < weeks.length; w++) {
+    const week = weeks[w];
+    for (let d = 0; d < week.contributionDays.length; d++) {
+      const day = week.contributionDays[d];
+      const date = new Date(day.date);
+      const dayOfWeek = date.getDay();
+      const x = padding.left + w * stride;
+      const y = padding.top + dayOfWeek * stride;
+      const level = day.contributionLevel || "NONE";
+      const count = day.contributionCount;
+      const dateStr = day.date;
+
+      cells += `    <rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2" ry="2" class="c-${level}" data-date="${dateStr}" data-count="${count}">
+      <title>${count} contribution${count !== 1 ? "s" : ""} on ${dateStr}</title>
+    </rect>\n`;
+    }
+  }
+
+  // Day labels
+  let dayLabelSvg = "";
+  for (let d = 0; d < 7; d++) {
+    if (dayLabels[d]) {
+      dayLabelSvg += `    <text x="${padding.left - 8}" y="${padding.top + d * stride + cellSize - 1}" text-anchor="end" class="label">${dayLabels[d]}</text>\n`;
+    }
+  }
+
+  // Month labels
+  let monthLabelSvg = "";
+  for (const m of monthLabels) {
+    monthLabelSvg += `    <text x="${m.x}" y="${padding.top - 8}" text-anchor="start" class="label">${m.label}</text>\n`;
+  }
+
+  // Legend
+  const legendColors = ["NONE", "FIRST_QUARTILE", "SECOND_QUARTILE", "THIRD_QUARTILE", "FOURTH_QUARTILE"];
+  const legendTexts = ["Less", "", "", "", "More"];
+  let legendSvg = `    <text x="${legendX}" y="${legendY}" class="label" text-anchor="start">Less</text>\n`;
+  for (let i = 0; i < 5; i++) {
+    const lx = legendX + 35 + i * (cellSize + gap);
+    legendSvg += `    <rect x="${lx}" y="${legendY - cellSize}" width="${cellSize}" height="${cellSize}" rx="2" ry="2" class="c-${legendColors[i]}"/>\n`;
+  }
+  legendSvg += `    <text x="${legendX + 35 + 5 * (cellSize + gap)}" y="${legendY}" class="label" text-anchor="start">More</text>\n`;
+
+  return `<!-- ================================================================ -->
+<!--                    🟢 CONTRIBUTION GRAPH                          -->
+<!-- ================================================================ -->
+
+<h2 align="center">✦ ${total} contributions in ${year}</h2>
+
+<br/>
+
+<p align="center">
+<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" style="max-width: 100%; height: auto;">
+  <style>
+    .c-NONE { fill: #ebedf0; }
+    .c-FIRST_QUARTILE { fill: #9be9a8; }
+    .c-SECOND_QUARTILE { fill: #40c463; }
+    .c-THIRD_QUARTILE { fill: #30a14e; }
+    .c-FOURTH_QUARTILE { fill: #216e39; }
+    .label { fill: #767676; font-size: 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }
+    rect { outline: none; }
+    @media (prefers-color-scheme: dark) {
+      .c-NONE { fill: #161b22; }
+      .c-FIRST_QUARTILE { fill: #0e4429; }
+      .c-SECOND_QUARTILE { fill: #006d32; }
+      .c-THIRD_QUARTILE { fill: #26a641; }
+      .c-FOURTH_QUARTILE { fill: #39d353; }
+      .label { fill: #8b949e; }
+    }
+  </style>
+  ${monthLabelSvg}
+  ${dayLabelSvg}
+  ${cells}
+  ${legendSvg}
+</svg>
+</p>
+
+<br/>`;
+}
+
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -398,30 +586,6 @@ function generateAnalytics() {
 <br/>`;
 }
 
-function generateContributionGraph() {
-  const p = theme.primary;
-
-  return `<!-- ================================================================ -->
-<!--                    🟢 CONTRIBUTION GRAPH                          -->
-<!-- ================================================================ -->
-
-<h2 align="center">✦ Contribution Graph</h2>
-
-<br/>
-
-<p align="center">
-  <a href="https://github.com/ashutosh00710/github-readme-activity-graph">
-    <img
-      src="https://github-readme-activity-graph.vercel.app/graph?username=${identity.username}&theme=vue&bg_color=${theme.background}&color=${p}&line=${p}&point=ffffff&area=true&area_color=${p}&hide_border=true&custom_title=Contribution%20Graph&radius=12"
-      alt="Activity Graph"
-      width="900"
-    />
-  </a>
-</p>
-
-<br/>`;
-}
-
 function generateSnake() {
   const u = identity.username;
 
@@ -665,6 +829,9 @@ async function main() {
   console.timeEnd("📦 Fetch");
   console.log(`   Repos:    ${repos.length} fetched`);
 
+  // Fetch contribution calendar
+  const calendar = await fetchContributions(identity.username);
+
   console.time("🏗️  Generate");
 
   // Build the complete README
@@ -687,7 +854,7 @@ ${generateDivider()}
 ${generateProjects(repos)}
 ${generateDivider()}
 ${generateAnalytics()}
-${generateContributionGraph()}
+${generateContributionGrid(calendar)}
 ${generateDivider()}
 ${generateSnake()}
 ${generateDivider()}
