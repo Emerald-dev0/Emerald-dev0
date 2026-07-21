@@ -23,7 +23,7 @@ const ROOT = path.resolve(__dirname, "..");
 
 const configPath = path.resolve(__dirname, "config.mjs");
 const { CONFIG } = await import(configPath);
-const { identity, social, theme, about, techStack, projects, goals, funFacts, footer } = CONFIG;
+const { identity, social, theme, about, techStack, projects, funFacts, footer } = CONFIG;
 
 // ─── GitHub API ─────────────────────────────────────────────
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
@@ -454,24 +454,70 @@ function generateSnake() {
 <br/>`;
 }
 
-function generateGoals() {
-  let items = goals.map(g =>
-    `<tr>
-      <td align="center" width="33%" style="padding: 16px;">
-        <table width="100%" style="border: 1px solid #${theme.border}; border-radius: 12px; background: #${theme.background}; padding: 14px;">
-          <tr><td align="center">
-            <span style="font-size: 2rem;">${g.emoji}</span>
-            <br/>
-            <b style="color: #${theme.primary};">${esc(g.label)}</b>
-            <br/>
-            <sub style="color: #${theme.text};">${esc(g.description)}</sub>
-            <br/><br/>
-            <img src="https://progress-bar.dev/${g.progress}/?title=progress&width=200&color=${theme.primary}" alt="${g.progress}%" />
-          </td></tr>
-        </table>
-      </td>
-    </tr>`
-  ).join("\n");
+/**
+ * Calculate how active a repo is based on last update time
+ * Returns a percentage (100 = updated today, 75 = this week, 50 = this month, 25 = older)
+ */
+function repoActivityLevel(dateStr) {
+  const days = (Date.now() - new Date(dateStr).getTime()) / 86400000;
+  if (days < 1) return 95;
+  if (days < 3) return 80;
+  if (days < 7) return 65;
+  if (days < 14) return 50;
+  if (days < 30) return 35;
+  if (days < 90) return 20;
+  return 10;
+}
+
+function generateGoals(repos) {
+  // Sort by most recently updated, take top 6
+  const active = [...repos]
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    .slice(0, 6);
+
+  if (active.length === 0) {
+    return `<!-- ================================================================ -->
+<!--                    🟢 CURRENTLY BUILDING                          -->
+<!-- ================================================================ -->
+
+<h2 align="center">✦ Now Building</h2>
+
+<br/>
+
+<p align="center"><sub>No active repositories.</sub></p>
+
+<br/>`;
+  }
+
+  // Build 2-per-row table
+  let rows = "";
+  for (let i = 0; i < active.length; i += 2) {
+    rows += `  <tr>\n`;
+    for (let j = i; j < i + 2 && j < active.length; j++) {
+      const r = active[j];
+      const desc = r.description.length > 60 ? esc(r.description.substring(0, 57) + "...") : esc(r.description);
+      const updated = timeAgo(r.updatedAt);
+      const activity = repoActivityLevel(r.updatedAt);
+
+      rows += `    <td align="center" width="50%" valign="top" style="padding: 8px;">
+      <table width="100%" style="border: 1px solid #${theme.border}; border-radius: 12px; background: #${theme.background}; padding: 14px;">
+        <tr><td align="left">
+          <a href="${r.url}" style="text-decoration: none; color: #${theme.primary}; font-size: 1rem; font-weight: 700;">✦ ${esc(r.name)}</a>
+          <br/>
+          <sub style="color: #${theme.text}; font-size: 0.8rem;">${desc}</sub>
+          <br/><br/>
+          <span style="display: inline-block; background: #1e293b; color: #${theme.primary}; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px;">● ${esc(r.language)}</span>
+          <span style="color: #64748b; font-size: 0.75rem; margin-left: 6px;">⭐ ${r.stars}</span>
+          <span style="color: #64748b; font-size: 0.75rem; margin-left: 6px;">📅 ${updated}</span>
+          <br/><br/>
+          <img src="https://progress-bar.dev/${activity}/?title=activity&width=180&color=${theme.primary}" alt="${activity}%" />
+        </td></tr>
+      </table>
+    </td>\n`;
+    }
+    if (i + 1 >= active.length) rows += `    <td width="50%"></td>\n`;
+    rows += `  </tr>\n`;
+  }
 
   return `<!-- ================================================================ -->
 <!--                    🟢 CURRENTLY BUILDING                          -->
@@ -482,13 +528,15 @@ function generateGoals() {
 <br/>
 
 <p align="center">
-  <table align="center" width="720">
-${items}
-  </table>
+  <samp>↓ Most recently active repos ↓</samp>
 </p>
 
+<br/>
+
 <p align="center">
-  <img src="https://img.shields.io/badge/2026%20Focus-Open%20Source%20×%20AI%20×%20Systems-${theme.primary}?style=for-the-badge&labelColor=${theme.background}" />
+  <table align="center" width="100%">
+${rows}
+  </table>
 </p>
 
 <br/>`;
@@ -643,7 +691,7 @@ ${generateContributionGraph()}
 ${generateDivider()}
 ${generateSnake()}
 ${generateDivider()}
-${generateGoals()}
+${generateGoals(repos)}
 ${generateDivider()}
 ${generateFunFacts()}
 ${generateDivider()}

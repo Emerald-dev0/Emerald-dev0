@@ -89,15 +89,6 @@ const CONFIG = {
     excludeRepos: ["Emerald-dev0", "Emerald-dev0.github.io"],
   },
 
-  // ─── Goals / Roadmap ──────────────────────────────────
-  goals: [
-    { emoji: "🔭", label: "Open Source", description: "Ship tools that help other engineers build faster", progress: 40 },
-    { emoji: "🧠", label: "AI Engineering", description: "Build intelligent agents & production ML pipelines", progress: 25 },
-    { emoji: "⚡", label: "Systems Design", description: "Architect distributed systems that scale gracefully", progress: 35 },
-    { emoji: "🌍", label: "Community", description: "Speak at 3 tech conferences this year", progress: 15 },
-    { emoji: "📝", label: "Technical Writing", description: "Publish 12 engineering deep-dives", progress: 30 },
-  ],
-
   // ─── Fun Facts ────────────────────────────────────────
   funFacts: [
     { icon: "🎯", fact: "I architect systems before writing a single line of code." },
