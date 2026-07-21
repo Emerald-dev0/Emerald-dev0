@@ -131,18 +131,32 @@ async function fetchTopRepos(username) {
 
 async function fetchUserStats(username) {
   try {
-    const user = await fetchWithFallback(`https://api.github.com/users/${username}`);
+    const [user, repos] = await Promise.all([
+      fetchWithFallback(`https://api.github.com/users/${username}`),
+      fetchWithFallback(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated&direction=desc`),
+    ]);
+
+    const totalStars = repos.reduce((sum, r) => sum + r.stargazers_count, 0);
+    const totalForks = repos.reduce((sum, r) => sum + r.forks_count, 0);
+    const languages = [...new Set(repos.filter(r => r.language).map(r => r.language))].slice(0, 6);
+    const topRepo = repos.sort((a, b) => b.stargazers_count - a.stargazers_count)[0];
+
     return {
       followers: user.followers,
       following: user.following,
       publicRepos: user.public_repos,
+      totalStars,
+      totalForks,
+      topLanguage: languages[0] || "N/A",
+      topRepo: topRepo ? topRepo.name : "N/A",
+      topRepoStars: topRepo ? topRepo.stargazers_count : 0,
       avatar: user.avatar_url,
       bio: user.bio || "",
       company: user.company || "",
-      blog: user.blog || "",
       location: user.location || "",
     };
-  } catch {
+  } catch (err) {
+    console.warn(`⚠️  Stats fetch failed: ${err.message}`);
     return null;
   }
 }
@@ -534,10 +548,47 @@ function generateProjects(repos) {
   return html;
 }
 
-function generateAnalytics() {
-  const u = identity.username;
+function generateAnalytics(stats, calendar) {
   const p = theme.primary;
   const bg = theme.background;
+  const txt = theme.text;
+  const border = theme.border;
+  const totalContributions = calendar?.totalContributions ?? "—";
+
+  function tile(icon, label, value, subtitle) {
+    return `
+    <td align="center" width="25%" style="padding: 6px;">
+      <table width="100%" style="border: 1px solid #${border}; border-radius: 12px; background: #${bg}; padding: 12px 8px;">
+        <tr><td align="center">
+          <span style="font-size: 1.6rem;">${icon}</span>
+          <br/>
+          <strong style="color: #${p}; font-size: 1.3rem;">${esc(String(value))}</strong>
+          <br/>
+          <sub style="color: #${txt}; font-size: 0.75rem;">${esc(label)}</sub>
+          ${subtitle ? `<br/><sub style="color: #555; font-size: 0.65rem;">${esc(subtitle)}</sub>` : ""}
+        </td></tr>
+      </table>
+    </td>`;
+  }
+
+  const statsTiles = [
+    tile("📦", "Repositories", stats?.publicRepos ?? "—"),
+    tile("⭐", "Total Stars", stats?.totalStars ?? "—", stats?.topRepo ? `Top: ${stats.topRepo}` : ""),
+    tile("🍴", "Total Forks", stats?.totalForks ?? "—"),
+    tile("👥", "Followers", stats?.followers ?? "—", stats?.following ? `${stats.following} following` : ""),
+  ];
+
+  // Languages bar
+  let langBar = "";
+  if (stats?.topLanguage) {
+    langBar = `<tr><td colspan="4" align="center" style="padding: 6px;">
+      <table width="100%" style="border: 1px solid #${border}; border-radius: 12px; background: #${bg}; padding: 12px;">
+        <tr><td align="center">
+          <sub style="color: #${txt}; font-size: 0.8rem;">🏆 Most used: <strong style="color: #${p};">${esc(stats.topLanguage)}</strong></sub>
+        </td></tr>
+      </table>
+    </td></tr>`;
+  }
 
   return `<!-- ================================================================ -->
 <!--                    🟢 GITHUB ANALYTICS                            -->
@@ -548,38 +599,11 @@ function generateAnalytics() {
 <br/>
 
 <p align="center">
-  <table align="center">
+  <table align="center" width="100%">
     <tr>
-      <td>
-        <a href="${social.github}">
-          <img
-            src="https://github-readme-stats.vercel.app/api?username=${u}&show_icons=true&count_private=true&include_all_commits=true&theme=vue-dark&bg_color=${bg}&hide_border=true&border_radius=12&icon_color=${p}&title_color=${p}&text_color=${theme.text}"
-            alt="GitHub Stats"
-            width="400"
-          />
-        </a>
-      </td>
-      <td>
-        <a href="https://git.io/streak-stats">
-          <img
-            src="https://github-readme-streak-stats.herokuapp.com?user=${u}&theme=vue-dark&hide_border=true&background=${bg}&stroke=${p}&ring=${p}&fire=${p}&currStreakNum=ffffff&sideNums=${p}&currStreakLabel=${p}&sideLabels=${theme.text}&border_radius=12"
-            alt="Streak Stats"
-            width="400"
-          />
-        </a>
-      </td>
+      ${statsTiles}
     </tr>
-    <tr>
-      <td colspan="2" align="center">
-        <a href="${social.github}">
-          <img
-            src="https://github-readme-stats.vercel.app/api/top-langs/?username=${u}&layout=compact&theme=vue-dark&bg_color=${bg}&hide_border=true&border_radius=12&title_color=${p}&text_color=${theme.text}"
-            alt="Top Languages"
-            width="830"
-          />
-        </a>
-      </td>
-    </tr>
+    ${langBar}
   </table>
 </p>
 
@@ -829,8 +853,11 @@ async function main() {
   console.timeEnd("📦 Fetch");
   console.log(`   Repos:    ${repos.length} fetched`);
 
-  // Fetch contribution calendar
-  const calendar = await fetchContributions(identity.username);
+  // Fetch contribution calendar and user stats in parallel
+  const [calendar, stats] = await Promise.all([
+    fetchContributions(identity.username),
+    fetchUserStats(identity.username),
+  ]);
 
   console.time("🏗️  Generate");
 
@@ -853,7 +880,7 @@ ${generateTechStack()}
 ${generateDivider()}
 ${generateProjects(repos)}
 ${generateDivider()}
-${generateAnalytics()}
+${generateAnalytics(stats, calendar)}
 ${generateContributionGrid(calendar)}
 ${generateDivider()}
 ${generateSnake()}
