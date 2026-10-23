@@ -25,7 +25,7 @@ Describe the form you want or the changes you need, review the proposed changes,
 - Google Forms integration
 - Review-before-apply workflow
 
-**[Explore Intake](https://github.com/Emerald-dev0/Intake)**
+**[Explore Intake](https://intake.calder.click/)**
 
 ---
 
